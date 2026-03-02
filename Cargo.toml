@@ -1,0 +1,43 @@
+[package]
+name = "jarvis-orchestrator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Audio I/O
+cpal = "0.15"
+hound = "3"
+rubato = "0.14"            # resampling: 48kHz stereo → 16kHz mono
+
+# Wake word
+
+# VAD
+webrtc-vad = "0.4"
+
+# Serialization / config
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI args (orchestrator startup flags)
+clap = { version = "4", features = ["derive", "env"] }
+# Error handling
+anyhow = "1"
+
+# Phase 3+ dependencies (commented out, added later)
+# reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+# axum = { version = "0.7", features = ["json", "ws"] }
+# tower = "0.5"
+# uuid = { version = "1", features = ["v4"] }
+# chrono = { version = "0.4", features = ["serde"] }
+
+[profile.release]
+strip = true
+lto = true

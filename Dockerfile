@@ -1,7 +1,7 @@
 # Multi-stage build: compile Rust, then copy binary to slim runtime.
 # Target: linux/amd64 (server node)
 
-FROM rust:1.82-bookworm AS builder
+FROM rust:1.85-bookworm AS builder
 
 # ALSA dev headers needed for cpal to compile.
 RUN apt-get update && apt-get install -y \

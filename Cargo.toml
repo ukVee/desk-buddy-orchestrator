@@ -13,9 +13,15 @@ hound = "3"
 rubato = "0.14"            # resampling: 48kHz stereo → 16kHz mono
 
 # Wake word
+# (rustpotter disabled — candle-core build conflict, stubbed in wake_word/detector.rs)
 
 # VAD
 webrtc-vad = "0.4"
+
+# HTTP client (STT, TTS, LLM) — Phase 3
+reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+bytes = "1"
+futures-util = "0.3"       # StreamExt for response byte streaming
 
 # Serialization / config
 serde = { version = "1", features = ["derive"] }
@@ -28,11 +34,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # CLI args (orchestrator startup flags)
 clap = { version = "4", features = ["derive", "env"] }
+
 # Error handling
 anyhow = "1"
 
-# Phase 3+ dependencies (commented out, added later)
-# reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
+# Phase 4+ dependencies (added later)
 # axum = { version = "0.7", features = ["json", "ws"] }
 # tower = "0.5"
 # uuid = { version = "1", features = ["v4"] }

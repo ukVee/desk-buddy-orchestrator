@@ -1,6 +1,9 @@
 mod audio;
 mod config;
+mod llm;
 mod pipeline;
+mod stt;
+mod tts;
 mod vad;
 mod wake_word;
 
@@ -24,10 +27,8 @@ async fn main() -> anyhow::Result<()> {
     let input_device = audio::devices::find_input_device(&config.audio.capture_device)?;
     let input_config = audio::devices::log_input_configs(&input_device)?;
 
-    // We also find the output device now, even though playback is Phase 3.
-    // This validates it exists at startup rather than failing later.
-    let _output_device = audio::devices::find_output_device(&config.audio.playback_device)?;
-    tracing::info!("Output device found (playback deferred to Phase 3)");
+    let output_device = audio::devices::find_output_device(&config.audio.playback_device)?;
+    tracing::info!("Output device ready for playback");
 
     // --- Start audio capture ---
     let capture_config = audio::capture::CaptureConfig {
@@ -66,9 +67,50 @@ async fn main() -> anyhow::Result<()> {
     // --- VAD ---
     let vad = vad::detector::VadDetector::new(&config.vad)?;
 
+    // --- Service clients ---
+    let stt = stt::client::SttClient::new(&config.services.whisper_url);
+    let llm = llm::client::LlmClient::new(&config.services.ollama_url, &config.services.ollama_model);
+    let tts = tts::client::TtsClient::new(&config.services.piper_url);
+
+    // Optional: health-check upstream services at startup.
+    // Non-fatal — services might come up after the orchestrator.
+    check_service_health(&stt, &llm, &tts).await;
+
+    let services = pipeline::voice::PipelineServices {
+        stt,
+        llm,
+        tts,
+        output_device,
+    };
+
     // --- Run pipeline ---
     tracing::info!("All subsystems initialized, starting voice pipeline");
-    pipeline::voice::run_pipeline(&config, audio_rx, wake_word, vad).await;
+    pipeline::voice::run_pipeline(&config, audio_rx, wake_word, vad, services).await;
 
     Ok(())
+}
+
+/// Best-effort health checks on upstream services.
+/// Logs warnings on failure but doesn't block startup.
+async fn check_service_health(
+    stt: &stt::client::SttClient,
+    llm: &llm::client::LlmClient,
+    tts: &tts::client::TtsClient,
+) {
+    tracing::info!("Checking upstream service health...");
+
+    match stt.health().await {
+        Ok(()) => tracing::info!("  whisper-stt: OK"),
+        Err(e) => tracing::warn!("  whisper-stt: UNREACHABLE ({e})"),
+    }
+
+    match tts.health().await {
+        Ok(()) => tracing::info!("  piper-tts: OK"),
+        Err(e) => tracing::warn!("  piper-tts: UNREACHABLE ({e})"),
+    }
+
+    match llm.health().await {
+        Ok(()) => tracing::info!("  ollama: OK"),
+        Err(e) => tracing::warn!("  ollama: UNREACHABLE ({e})"),
+    }
 }

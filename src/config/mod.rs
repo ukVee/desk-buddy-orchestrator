@@ -4,18 +4,13 @@ use serde::Deserialize;
 /// Runtime configuration for the JARVIS orchestrator.
 ///
 /// Hierarchy: CLI args > env vars > config file > defaults.
-/// For Phase 2, we only use CLI args and env vars.
 #[derive(Debug, Clone)]
 pub struct Config {
     pub audio: AudioConfig,
     pub wake_word: WakeWordConfig,
     pub vad: VadConfig,
+    pub services: ServiceConfig,
     pub log_level: String,
-    // Phase 3+
-    // pub whisper_url: String,
-    // pub piper_url: String,
-    // pub ollama_url: String,
-    // pub ollama_model: String,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +54,25 @@ pub struct VadConfig {
     pub frame_duration_ms: usize,
 }
 
+#[derive(Debug, Clone)]
+pub struct ServiceConfig {
+    /// Whisper STT endpoint (k3s ClusterIP).
+    /// e.g. "http://whisper-stt.jarvis.svc.cluster.local:8080"
+    pub whisper_url: String,
+
+    /// Piper TTS endpoint (k3s ClusterIP).
+    /// e.g. "http://piper-tts.jarvis.svc.cluster.local:8081"
+    pub piper_url: String,
+
+    /// Ollama endpoint (direct LAN to laptop).
+    /// e.g. "http://192.168.0.XXX:11434"
+    pub ollama_url: String,
+
+    /// Ollama model name.
+    /// e.g. "mistral:latest"
+    pub ollama_model: String,
+}
+
 /// CLI arguments — thin layer that feeds into Config.
 #[derive(Parser, Debug)]
 #[command(name = "jarvis-orchestrator", about = "JARVIS voice assistant orchestrator")]
@@ -91,6 +105,22 @@ pub struct CliArgs {
     #[arg(long, env = "VAD_AGGRESSIVENESS", default_value = "2")]
     pub vad_aggressiveness: i32,
 
+    /// Whisper STT service URL
+    #[arg(long, env = "WHISPER_URL", default_value = "http://whisper-stt.jarvis.svc.cluster.local:8080")]
+    pub whisper_url: String,
+
+    /// Piper TTS service URL
+    #[arg(long, env = "PIPER_URL", default_value = "http://piper-tts.jarvis.svc.cluster.local:8081")]
+    pub piper_url: String,
+
+    /// Ollama LLM service URL
+    #[arg(long, env = "OLLAMA_URL", default_value = "http://192.168.0.72:11434")]
+    pub ollama_url: String,
+
+    /// Ollama model name
+    #[arg(long, env = "OLLAMA_MODEL", default_value = "mistral:latest")]
+    pub ollama_model: String,
+
     /// Log level (trace, debug, info, warn, error)
     #[arg(long, env = "RUST_LOG", default_value = "jarvis=info")]
     pub log_level: String,
@@ -113,6 +143,12 @@ impl Config {
                 silence_timeout_ms: args.vad_silence_ms,
                 aggressiveness: args.vad_aggressiveness,
                 frame_duration_ms: 30, // 30ms frames — best balance for webrtc-vad
+            },
+            services: ServiceConfig {
+                whisper_url: args.whisper_url,
+                piper_url: args.piper_url,
+                ollama_url: args.ollama_url,
+                ollama_model: args.ollama_model,
             },
             log_level: args.log_level,
         }

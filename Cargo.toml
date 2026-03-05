@@ -13,7 +13,7 @@ hound = "3"
 rubato = "0.14"            # resampling: 48kHz stereo → 16kHz mono
 
 # Wake word
-# (rustpotter disabled — candle-core build conflict, stubbed in wake_word/detector.rs)
+tract-onnx = "0.21"
 
 # VAD
 webrtc-vad = "0.4"

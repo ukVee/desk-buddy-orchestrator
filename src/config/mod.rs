@@ -30,14 +30,20 @@ pub struct AudioConfig {
 
 #[derive(Debug, Clone)]
 pub struct WakeWordConfig {
-    /// Path to the .rpw model file.
-    pub model_path: String,
+    /// Directory containing the shared OpenWakeWord models:
+    ///   melspectrogram.onnx
+    ///   embedding_model.onnx
+    pub models_dir: String,
 
-    /// Detection threshold (0.0 - 1.0). Higher = fewer false positives.
+    /// Path to the keyword-specific verifier ONNX model.
+    /// Can be inside models_dir or elsewhere.
+    /// e.g. "/data/wakeword/models/hey_jarvis_v0.1.onnx"
+    pub keyword_model_path: String,
+
+    /// Detection threshold (0.0-1.0). Higher = fewer false positives.
     pub threshold: f32,
 
     /// If true, skip wake word detection and trigger on any speech.
-    /// Useful for testing without a trained model.
     pub bypass: bool,
 }
 
@@ -85,9 +91,14 @@ pub struct CliArgs {
     #[arg(long, env = "PLAYBACK_DEVICE", default_value = "PCH")]
     pub playback_device: String,
 
-    /// Wake word model path
-    #[arg(long, env = "WAKEWORD_MODEL", default_value = "/data/wakeword/hey_jarvis.rpw")]
-    pub wakeword_model: String,
+    
+    /// Directory containing shared OpenWakeWord ONNX models
+    #[arg(long, env = "WAKEWORD_MODELS_DIR", default_value = "/data/wakeword/models/hey_jarvis_v0.1.onnx")]
+    pub wakeword_models_dir: String,
+
+    /// Path to keyword-specific verifier ONNX model
+    #[arg(long, env = "WAKEWORD_KEYWORD_MODEL", default_value = "/data/wakeword/models/hey_jarvis.onnx")]
+    pub wakeword_keyword_model: String,
 
     /// Wake word detection threshold (0.0-1.0)
     #[arg(long, env = "WAKEWORD_THRESHOLD", default_value = "0.5")]
@@ -135,7 +146,8 @@ impl Config {
                 target_sample_rate: 16000,
             },
             wake_word: WakeWordConfig {
-                model_path: args.wakeword_model,
+                models_dir: args.wakeword_models_dir,
+                keyword_model_path: args.wakeword_keyword_model,
                 threshold: args.wakeword_threshold,
                 bypass: args.wakeword_bypass,
             },

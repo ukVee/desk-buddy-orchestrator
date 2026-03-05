@@ -1,0 +1,81 @@
+# Phase 3 orchestrator deployment — adds service URL env vars.
+# Apply with: kubectl apply -f orchestrator-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jarvis-orchestrator
+  namespace: jarvis
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: jarvis-orchestrator
+  template:
+    metadata:
+      labels:
+        app: jarvis-orchestrator
+    spec:
+      nodeSelector:
+        jarvis.io/role: orchestrator
+      containers:
+        - name: orchestrator
+          image: 192.168.0.200:30500/jarvis/orchestrator:v0.3
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: snd-devices
+              mountPath: /dev/snd
+            - name: jarvis-data
+              mountPath: /data
+          env:
+            # Audio devices (substring match)
+            - name: CAPTURE_DEVICE
+              value: "Microphones"
+            - name: PLAYBACK_DEVICE
+              value: "PCH"
+            # Wake word (bypassed until model trained)
+            - name: WAKEWORD_BYPASS
+              value: "false"
+            - name: WAKEWORD_MODELS_DIR
+              value: "/data/wakeword/models"
+            - name: WAKEWORD_KEYWORD_MODEL
+              value: "/data/wakeword/models/hey_jarvis_v0.1.onnx"
+            - name: WAKEWORD_THRESHOLD
+              value: "0.5"
+            # VAD
+            - name: VAD_SILENCE_MS
+              value: "800"
+            - name: VAD_AGGRESSIVENESS
+              value: "2"
+            # Service URLs
+            - name: WHISPER_URL
+              value: "http://whisper-stt.jarvis.svc.cluster.local:8080"
+            - name: PIPER_URL
+              value: "http://piper-tts.jarvis.svc.cluster.local:8081"
+            - name: OLLAMA_URL
+              value: "http://192.168.0.72:11434"
+            - name: OLLAMA_MODEL
+              value: "mistral:latest"
+            # Logging
+            - name: RUST_LOG
+              value: "jarvis=info"
+          ports:
+            - containerPort: 9090
+              name: mgmt
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "1000m"
+            limits:
+              memory: "512Mi"
+              cpu: "3000m"
+      volumes:
+        - name: snd-devices
+          hostPath:
+            path: /dev/snd
+            type: Directory
+        - name: jarvis-data
+          persistentVolumeClaim:
+            claimName: jarvis-data-pvc
